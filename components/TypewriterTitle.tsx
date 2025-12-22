@@ -1,41 +1,49 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { samplePrompts } from '@/lib/mock-data'
 
 export function TypewriterTitle() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [displayedText, setDisplayedText] = useState('')
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [phase, setPhase] = useState<'typing' | 'pausing' | 'deleting'>('typing')
+
+  const currentPrompt = samplePrompts[currentIndex]
+
+  const handleTyping = useCallback(() => {
+    if (displayedText.length < currentPrompt.length) {
+      setDisplayedText(currentPrompt.slice(0, displayedText.length + 1))
+    } else {
+      setPhase('pausing')
+    }
+  }, [displayedText, currentPrompt])
+
+  const handleDeleting = useCallback(() => {
+    if (displayedText.length > 0) {
+      setDisplayedText(displayedText.slice(0, -1))
+    } else {
+      setCurrentIndex((prev) => (prev + 1) % samplePrompts.length)
+      setPhase('typing')
+    }
+  }, [displayedText])
 
   useEffect(() => {
-    const currentPrompt = samplePrompts[currentIndex]
-    const typingSpeed = isDeleting ? 30 : 80
-    const pauseTime = 2000
+    let timeout: NodeJS.Timeout
 
-    if (!isDeleting && displayedText === currentPrompt) {
-      // Pause before deleting
-      const timeout = setTimeout(() => setIsDeleting(true), pauseTime)
-      return () => clearTimeout(timeout)
+    switch (phase) {
+      case 'typing':
+        timeout = setTimeout(handleTyping, 80)
+        break
+      case 'pausing':
+        timeout = setTimeout(() => setPhase('deleting'), 2000)
+        break
+      case 'deleting':
+        timeout = setTimeout(handleDeleting, 30)
+        break
     }
-
-    if (isDeleting && displayedText === '') {
-      // Move to next prompt
-      setIsDeleting(false)
-      setCurrentIndex((prev) => (prev + 1) % samplePrompts.length)
-      return
-    }
-
-    const timeout = setTimeout(() => {
-      if (isDeleting) {
-        setDisplayedText(currentPrompt.slice(0, displayedText.length - 1))
-      } else {
-        setDisplayedText(currentPrompt.slice(0, displayedText.length + 1))
-      }
-    }, typingSpeed)
 
     return () => clearTimeout(timeout)
-  }, [displayedText, isDeleting, currentIndex])
+  }, [phase, handleTyping, handleDeleting])
 
   return (
     <h1 className="text-center font-serif text-4xl font-light leading-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">

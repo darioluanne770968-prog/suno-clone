@@ -11,10 +11,12 @@ import {
   Volume2,
   VolumeX,
   Repeat,
+  Repeat1,
   Shuffle,
+  Heart,
 } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
-import { usePlayerStore } from '@/lib/store'
+import { usePlayerStore, useAppStore } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 function formatTime(seconds: number): string {
@@ -30,17 +32,25 @@ export function MusicPlayer() {
     volume,
     progress,
     duration,
+    shuffle,
+    repeat,
     setIsPlaying,
     setVolume,
     setProgress,
     setDuration,
     playNext,
     playPrevious,
+    toggleShuffle,
+    toggleRepeat,
   } = usePlayerStore()
+
+  const { likedTrackIds, toggleLike } = useAppStore()
 
   const soundRef = useRef<Howl | null>(null)
   const [isMuted, setIsMuted] = useState(false)
   const [prevVolume, setPrevVolume] = useState(volume)
+
+  const isLiked = currentTrack ? likedTrackIds.includes(currentTrack.id) : false
 
   useEffect(() => {
     if (!currentTrack) return
@@ -59,7 +69,12 @@ export function MusicPlayer() {
         setDuration(soundRef.current?.duration() || 0)
       },
       onend: () => {
-        playNext()
+        if (repeat === 'one') {
+          soundRef.current?.seek(0)
+          soundRef.current?.play()
+        } else {
+          playNext()
+        }
       },
     })
 
@@ -70,6 +85,7 @@ export function MusicPlayer() {
     return () => {
       soundRef.current?.unload()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack?.id])
 
   useEffect(() => {
@@ -98,6 +114,13 @@ export function MusicPlayer() {
 
     return () => clearInterval(interval)
   }, [isPlaying, setProgress])
+
+  // Handle seek when progress is changed externally (for repeat one restart)
+  useEffect(() => {
+    if (soundRef.current && progress === 0 && repeat === 'one') {
+      soundRef.current.seek(0)
+    }
+  }, [progress, repeat])
 
   const handleSeek = (value: number[]) => {
     const newProgress = value[0]
@@ -143,12 +166,28 @@ export function MusicPlayer() {
             </h4>
             <p className="truncate text-xs text-white/60">{currentTrack.artist}</p>
           </div>
+          <button
+            onClick={() => toggleLike(currentTrack.id)}
+            className={cn(
+              'ml-2 transition-colors',
+              isLiked ? 'text-pink-500' : 'text-white/40 hover:text-white'
+            )}
+          >
+            <Heart className={cn('h-4 w-4', isLiked && 'fill-current')} />
+          </button>
         </div>
 
         {/* Player controls */}
         <div className="flex flex-1 flex-col items-center gap-1 max-w-xl">
           <div className="flex items-center gap-4">
-            <button className="text-white/60 hover:text-white transition-colors">
+            <button
+              onClick={toggleShuffle}
+              className={cn(
+                'transition-colors',
+                shuffle ? 'text-orange-500' : 'text-white/60 hover:text-white'
+              )}
+              title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+            >
               <Shuffle className="h-4 w-4" />
             </button>
             <button
@@ -173,8 +212,28 @@ export function MusicPlayer() {
             >
               <SkipForward className="h-5 w-5" />
             </button>
-            <button className="text-white/60 hover:text-white transition-colors">
-              <Repeat className="h-4 w-4" />
+            <button
+              onClick={toggleRepeat}
+              className={cn(
+                'transition-colors relative',
+                repeat !== 'off' ? 'text-orange-500' : 'text-white/60 hover:text-white'
+              )}
+              title={
+                repeat === 'off'
+                  ? 'Repeat off'
+                  : repeat === 'all'
+                  ? 'Repeat all'
+                  : 'Repeat one'
+              }
+            >
+              {repeat === 'one' ? (
+                <Repeat1 className="h-4 w-4" />
+              ) : (
+                <Repeat className="h-4 w-4" />
+              )}
+              {repeat === 'all' && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2 items-center justify-center rounded-full bg-orange-500" />
+              )}
             </button>
           </div>
 

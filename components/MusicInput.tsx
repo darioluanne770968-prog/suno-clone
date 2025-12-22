@@ -47,14 +47,14 @@ export function MusicInput() {
     setGenerationProgress(0)
 
     // Simulate generation progress
+    let currentProgress = 0
     const progressInterval = setInterval(() => {
-      setGenerationProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval)
-          return 100
-        }
-        return prev + Math.random() * 15
-      })
+      currentProgress += Math.random() * 15
+      if (currentProgress >= 100) {
+        currentProgress = 100
+        clearInterval(progressInterval)
+      }
+      setGenerationProgress(currentProgress)
     }, 300)
 
     // Simulate AI generation delay
