@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Play, Pause, Heart, Share2, ListPlus, Clock, Calendar, Music2, Sparkles } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Heart, Share2, ListPlus, Clock, Calendar, Music2, Sparkles, Download } from 'lucide-react'
 import { usePlayerStore, useAppStore } from '@/lib/store'
 import { mockTracks } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
@@ -77,6 +77,26 @@ export default function TrackPage() {
       } catch {
         // User cancelled or share failed
       }
+    }
+  }
+
+  const handleDownload = async () => {
+    if (!track) return
+    try {
+      const response = await fetch(track.audioUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${track.title}.mp3`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download failed:', error)
+      // Fallback: open in new tab
+      window.open(track.audioUrl, '_blank')
     }
   }
 
@@ -222,6 +242,13 @@ export default function TrackPage() {
                   title="Share"
                 >
                   <Share2 className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white/60 transition-colors hover:bg-white/20 hover:text-white"
+                  title="Download"
+                >
+                  <Download className="h-5 w-5" />
                 </button>
               </div>
             </div>
